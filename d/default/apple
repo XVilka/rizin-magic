@@ -17,7 +17,7 @@
 # GRR: Too weak
 #0	string		zsys			Macintosh System File (data)
 #0	string		FNDR			Macintosh Finder (data)
-#0	string		libr			Macintosh Library (data)
+#0	string		librz			Macintosh Library (data)
 #>2	string		x			: %s
 #0	string		shlb			Macintosh Shared Library (data)
 #>2	string		x			: %s
@@ -148,7 +148,7 @@
 #>65	string		acf3		(Aldus FreeHand)
 #>65	string		cdev		(control panel)
 #>65	string		dfil		(Desk Acessory suitcase)
-#>65	string		libr		(library)
+#>65	string		librz		(library)
 #>65	string		nX^d		(WriteNow word processor)
 #>65	string		nX^w		(WriteNow dictionary)
 #>65	string		rsrc		(resource)

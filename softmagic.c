@@ -29,32 +29,32 @@
 /*
  * softmagic - interpret variable magic from MAGIC
  */
-#include <r_userconf.h>
+#include <rz_userconf.h>
 
 #if !USE_LIB_MAGIC
 
 #include "file.h"
-#include "r_regex.h"
+#include "rz_regex.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include "r_util/r_time.h"
+#include <time.h>
 
-static int match(RMagic *, struct r_magic *, ut32,
+static int match(RzMagic *, struct rz_magic *, ut32,
     const ut8 *, size_t, int);
-static int mget(RMagic *, const ut8 *,
-    struct r_magic *, size_t, unsigned int);
-static int magiccheck(RMagic *, struct r_magic *);
-static st32 mprint(RMagic *, struct r_magic *);
+static int mget(RzMagic *, const ut8 *,
+    struct rz_magic *, size_t, unsigned int);
+static int magiccheck(RzMagic *, struct rz_magic *);
+static st32 mprint(RzMagic *, struct rz_magic *);
 static void mdebug(ut32, const char *, size_t);
-static int mcopy(RMagic *, union VALUETYPE *, int, int,
+static int mcopy(RzMagic *, union VALUETYPE *, int, int,
     const ut8 *, ut32, size_t, size_t);
-static int mconvert(RMagic *, struct r_magic *);
-static int print_sep(RMagic *, int);
-static void cvt_8(union VALUETYPE *, const struct r_magic *);
-static void cvt_16(union VALUETYPE *, const struct r_magic *);
-static void cvt_32(union VALUETYPE *, const struct r_magic *);
-static void cvt_64(union VALUETYPE *, const struct r_magic *);
+static int mconvert(RzMagic *, struct rz_magic *);
+static int print_sep(RzMagic *, int);
+static void cvt_8(union VALUETYPE *, const struct rz_magic *);
+static void cvt_16(union VALUETYPE *, const struct rz_magic *);
+static void cvt_32(union VALUETYPE *, const struct rz_magic *);
+static void cvt_64(union VALUETYPE *, const struct rz_magic *);
 
 /*
  * Macro to give description string according to whether we want plain
@@ -67,7 +67,7 @@ static void cvt_64(union VALUETYPE *, const struct r_magic *);
  * Passed the name and FILE * of one file to be typed.
  */
 /*ARGSUSED1*/		/* nbytes passed for regularity, maybe need later */
-int file_softmagic(RMagic *ms, const ut8 *buf, size_t nbytes, int mode) {
+int file_softmagic(RzMagic *ms, const ut8 *buf, size_t nbytes, int mode) {
 	struct mlist *ml;
 	int rv;
 	for (ml = ms->mlist->next; ml != ms->mlist; ml = ml->next) {
@@ -105,7 +105,7 @@ int file_softmagic(RMagic *ms, const ut8 *buf, size_t nbytes, int mode) {
  *	If a continuation matches, we bump the current continuation level
  *	so that higher-level continuations are processed.
  */
-static int match(RMagic *ms, struct r_magic *magic, ut32 nmagic, const ut8 *s, size_t nbytes, int mode) {
+static int match(RzMagic *ms, struct rz_magic *magic, ut32 nmagic, const ut8 *s, size_t nbytes, int mode) {
 	ut32 magindex = 0;
 	unsigned int cont_level = 0;
 	int need_separator = 0;
@@ -118,7 +118,7 @@ static int match(RMagic *ms, struct r_magic *magic, ut32 nmagic, const ut8 *s, s
 	}
 	for (magindex = 0; magindex < nmagic; magindex++) {
 		int flush;
-		struct r_magic *m = &magic[magindex];
+		struct rz_magic *m = &magic[magindex];
 
 		if ((m->flag & BINTEST) != mode) {
 			/* Skip sub-tests */
@@ -275,23 +275,23 @@ static int match(RMagic *ms, struct r_magic *magic, ut32 nmagic, const ut8 *s, s
 	return returnval;  /* This is hit if -k is set or there is no match */
 }
 
-static int check_fmt(RMagic *ms, struct r_magic *m) {
-	RRegex rx;
+static int check_fmt(RzMagic *ms, struct rz_magic *m) {
+	RzRegex rx;
 	int rc;
 
 	if (!strchr (R_MAGIC_DESC, '%')) {
 		return 0;
 	}
 
-	rc = r_regex_comp (&rx, "%[-0-9\\.]*s", R_REGEX_EXTENDED|R_REGEX_NOSUB);
+	rc = rz_regex_comp (&rx, "%[-0-9\\.]*s", R_REGEX_EXTENDED|R_REGEX_NOSUB);
 	if (rc) {
 		char errmsg[512];
-		r_regex_error (rc, &rx, errmsg, sizeof (errmsg) - 1);
+		rz_regex_error (rc, &rx, errmsg, sizeof (errmsg) - 1);
 		file_magerror (ms, "regex error %d, (%s)", rc, errmsg);
 		return -1;
 	} else {
-		rc = r_regex_exec (&rx, R_MAGIC_DESC, 0, 0, 0);
-		r_regex_fini (&rx);
+		rc = rz_regex_exec (&rx, R_MAGIC_DESC, 0, 0, 0);
+		rz_regex_fini (&rx);
 		return !rc;
 	}
 }
@@ -309,14 +309,13 @@ char * strdupn(const char *str, size_t n) {
 	return copy;
 }
 
-static st32 mprint(RMagic *ms, struct r_magic *m) {
+static st32 mprint(RzMagic *ms, struct rz_magic *m) {
 	ut64 v;
 	float vf;
 	double vd;
 	ut64 t = 0;
  	char *buf = NULL;
 	union VALUETYPE *p = &ms->ms_value;
-	char pp[ASCTIME_BUF_MINLEN];
 
   	switch (m->type) {
   	case FILE_BYTE:
@@ -433,7 +432,7 @@ static st32 mprint(RMagic *ms, struct r_magic *m) {
 	case FILE_BEDATE:
 	case FILE_LEDATE:
 	case FILE_MEDATE:
-		if (file_printf (ms, R_MAGIC_DESC, file_fmttime (p->l, 1, pp)) == -1) {
+		if (file_printf (ms, R_MAGIC_DESC, file_fmttime (p->l, 1)) == -1) {
 			return -1;
 		}
 		t = ms->offset + sizeof(time_t);
@@ -442,7 +441,7 @@ static st32 mprint(RMagic *ms, struct r_magic *m) {
 	case FILE_BELDATE:
 	case FILE_LELDATE:
 	case FILE_MELDATE:
-		if (file_printf (ms, R_MAGIC_DESC, file_fmttime (p->l, 0, pp)) == -1) {
+		if (file_printf (ms, R_MAGIC_DESC, file_fmttime (p->l, 0)) == -1) {
 			return -1;
 		}
 		t = ms->offset + sizeof(time_t);
@@ -450,7 +449,7 @@ static st32 mprint(RMagic *ms, struct r_magic *m) {
 	case FILE_QDATE:
 	case FILE_BEQDATE:
 	case FILE_LEQDATE:
-		if (file_printf (ms, R_MAGIC_DESC, file_fmttime ((ut32)p->q, 1, pp)) == -1) {
+		if (file_printf (ms, R_MAGIC_DESC, file_fmttime ((ut32)p->q, 1)) == -1) {
 			return -1;
 		}
 		t = ms->offset + sizeof(ut64);
@@ -458,7 +457,7 @@ static st32 mprint(RMagic *ms, struct r_magic *m) {
 	case FILE_QLDATE:
 	case FILE_BEQLDATE:
 	case FILE_LEQLDATE:
-		if (file_printf (ms, R_MAGIC_DESC, file_fmttime ((ut32)p->q, 0, pp)) == -1) {
+		if (file_printf (ms, R_MAGIC_DESC, file_fmttime ((ut32)p->q, 0)) == -1) {
 			return -1;
 		}
 		t = ms->offset + sizeof(ut64);
@@ -594,19 +593,19 @@ static st32 mprint(RMagic *ms, struct r_magic *m) {
 	if (m->mask_op & FILE_OPINVERSE) \
 		p->fld = ~p->fld \
 
-static void cvt_8(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_8(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT (b, (ut8));
 }
 
-static void cvt_16(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_16(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT (h, (ut16));
 }
 
-static void cvt_32(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_32(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT (l, (ut32));
 }
 
-static void cvt_64(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_64(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT (q, (ut64));
 }
 
@@ -627,11 +626,11 @@ static void cvt_64(union VALUETYPE *p, const struct r_magic *m) {
 			break; \
 		} \
 
-static void cvt_float(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_float(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT2 (f, (float));
 }
 
-static void cvt_double(union VALUETYPE *p, const struct r_magic *m) {
+static void cvt_double(union VALUETYPE *p, const struct rz_magic *m) {
 	DO_CVT2 (d, (double));
 }
 
@@ -640,7 +639,7 @@ static void cvt_double(union VALUETYPE *p, const struct r_magic *m) {
  * While we're here, let's apply the mask operation
  * (unless you have a better idea)
  */
-static int mconvert(RMagic *ms, struct r_magic *m) {
+static int mconvert(RzMagic *ms, struct rz_magic *m) {
 	union VALUETYPE *p = &ms->ms_value;
 
 	switch (m->type) {
@@ -696,7 +695,7 @@ static int mconvert(RMagic *ms, struct r_magic *m) {
 	case FILE_BELONG:
 	case FILE_BEDATE:
 	case FILE_BELDATE:
-		p->l = (st32) r_read_be32 (p->hl);
+		p->l = (st32) rz_read_be32 (p->hl);
 		cvt_32(p, m);
 		return 1;
 	case FILE_BEQUAD:
@@ -716,7 +715,7 @@ static int mconvert(RMagic *ms, struct r_magic *m) {
 	case FILE_LELONG:
 	case FILE_LEDATE:
 	case FILE_LELDATE:
-		p->l = (st32) r_read_le32 (p->hl);
+		p->l = (st32) rz_read_le32 (p->hl);
 		cvt_32(p, m);
 		return 1;
 	case FILE_LEQUAD:
@@ -784,7 +783,7 @@ static void mdebug(ut32 offset, const char *str, size_t len) {
 	(void) fputc('\n', stderr);
 }
 
-static int mcopy(RMagic *ms, union VALUETYPE *p, int type, int indir, const ut8 *s, ut32 offset, size_t nbytes, size_t linecnt) {
+static int mcopy(RzMagic *ms, union VALUETYPE *p, int type, int indir, const ut8 *s, ut32 offset, size_t nbytes, size_t linecnt) {
 	/*
 	 * Note: FILE_SEARCH and FILE_REGEX do not actually copy
 	 * anything, but setup pointers into the source
@@ -888,7 +887,7 @@ static int mcopy(RMagic *ms, union VALUETYPE *p, int type, int indir, const ut8 
 	return 0;
 }
 
-static int mget(RMagic *ms, const ut8 *s, struct r_magic *m, size_t nbytes, unsigned int cont_level) {
+static int mget(RzMagic *ms, const ut8 *s, struct rz_magic *m, size_t nbytes, unsigned int cont_level) {
 	ut32 offset = ms->offset;
 	ut32 count = m->str_range;
 	union VALUETYPE *p = &ms->ms_value;
@@ -1304,7 +1303,7 @@ static ut64 file_strncmp16(const char *a, const char *b, size_t len, ut32 flags)
 	return file_strncmp(a, b, len, flags);
 }
 
-static int magiccheck(RMagic *ms, struct r_magic *m) {
+static int magiccheck(RzMagic *ms, struct rz_magic *m) {
 	ut64 l = m->value.q;
 	ut64 v;
 	float fl, fv;
@@ -1420,7 +1419,7 @@ static int magiccheck(RMagic *ms, struct r_magic *m) {
 	}
 	case FILE_REGEX: {
 		int rc;
-		RRegex rx;
+		RzRegex rx;
 		char errmsg[512];
 
 		if (!ms->search.s) {
@@ -1428,16 +1427,16 @@ static int magiccheck(RMagic *ms, struct r_magic *m) {
 		}
 
 		l = 0;
-		rc = r_regex_comp (&rx, m->value.s,
+		rc = rz_regex_comp (&rx, m->value.s,
 		    R_REGEX_EXTENDED|R_REGEX_NEWLINE|
 		    ((m->str_flags & STRING_IGNORE_CASE) ? R_REGEX_ICASE : 0));
 		if (rc) {
-			(void)r_regex_error(rc, &rx, errmsg, sizeof(errmsg) - 1);
+			(void)rz_regex_error(rc, &rx, errmsg, sizeof(errmsg) - 1);
 			file_magerror(ms, "regex error %d, (%s)",
 			    rc, errmsg);
 			v = (ut64) - 1;
 		} else {
-			RRegexMatch pmatch[1];
+			RzRegexMatch pmatch[1];
 #ifndef R_REGEX_STARTEND
 #define	R_REGEX_STARTEND	0
 			size_t l = ms->search.s_len - 1;
@@ -1447,7 +1446,7 @@ static int magiccheck(RMagic *ms, struct r_magic *m) {
 			pmatch[0].rm_so = 0;
 			pmatch[0].rm_eo = ms->search.s_len;
 #endif
-			rc = r_regex_exec (&rx, (const char *)ms->search.s, 1, pmatch, R_REGEX_STARTEND);
+			rc = rz_regex_exec (&rx, (const char *)ms->search.s, 1, pmatch, R_REGEX_STARTEND);
 #if R_REGEX_STARTEND == 0
 			((char *)(intptr_t)ms->search.s)[l] = c;
 #endif
@@ -1462,12 +1461,12 @@ static int magiccheck(RMagic *ms, struct r_magic *m) {
 				v = 1;
 				break;
 			default:
-				(void)r_regex_error (rc, &rx, errmsg, sizeof (errmsg) - 1);
+				(void)rz_regex_error (rc, &rx, errmsg, sizeof (errmsg) - 1);
 				file_magerror (ms, "regexec error %d, (%s)", rc, errmsg);
 				v = UT64_MAX;
 				break;
 			}
-			r_regex_fini (&rx);
+			rz_regex_fini (&rx);
 		}
 		if (v == (ut64)-1) {
 			return -1;
@@ -1544,7 +1543,7 @@ static int magiccheck(RMagic *ms, struct r_magic *m) {
 	return matched;
 }
 
-static int print_sep(RMagic *ms, int firstline) {
+static int print_sep(RzMagic *ms, int firstline) {
 	return firstline? 0: file_printf (ms, "\n- ");
 }
 #endif

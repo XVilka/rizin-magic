@@ -37,7 +37,7 @@
  * Comments changed and some code/comments reformatted
  * for file command by Ian Darwin.
  */
-#include <r_userconf.h>
+#include <rz_userconf.h>
 
 #if !USE_LIB_MAGIC
 
@@ -122,7 +122,7 @@ static int is_tar(const ut8 *buf, size_t nbytes) {
 	return 1;			/* Old fashioned tar archive */
 }
 
-int file_is_tar(RMagic *ms, const ut8 *buf, size_t nbytes) {
+int file_is_tar(RzMagic *ms, const ut8 *buf, size_t nbytes) {
 	/*
 	 * Do the tar test first, because if the first file in the tar
 	 * archive starts with a dot, we can confuse it with an nroff file.

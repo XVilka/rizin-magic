@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  */
 
-#include <r_userconf.h>
+#include <rz_userconf.h>
 
 #if !USE_LIB_MAGIC
 
@@ -41,7 +41,7 @@
 #endif
 
 // copypasta to fix an OPENBSDBUG
-static int file_vprintf(RMagic *ms, const char *fmt, va_list ap) {
+static int file_vprintf(RzMagic *ms, const char *fmt, va_list ap) {
 	va_list ap2;
 	char cbuf[4096];
 	char *buf, *newstr;
@@ -99,7 +99,7 @@ out:
 /*
  * Like printf, only we append to a buffer.
  */
-int file_printf(RMagic *ms, const char *fmt, ...) {
+int file_printf(RzMagic *ms, const char *fmt, ...) {
 	va_list ap;
 	int ret;
 
@@ -113,7 +113,7 @@ int file_printf(RMagic *ms, const char *fmt, ...) {
  * error - print best error message possible
  */
 /*VARARGS*/
-static void file_error_core(RMagic *ms, int error, const char *f, va_list va, ut32 lineno) {
+static void file_error_core(RzMagic *ms, int error, const char *f, va_list va, ut32 lineno) {
 	/* Only the first error is ok */
 	if (!ms || ms->haderr) {
 		return;
@@ -133,7 +133,7 @@ static void file_error_core(RMagic *ms, int error, const char *f, va_list va, ut
 }
 
 /*VARARGS*/
-void file_error(RMagic *ms, int error, const char *f, ...) {
+void file_error(RzMagic *ms, int error, const char *f, ...) {
 	va_list va;
 	va_start (va, f);
 	file_error_core (ms, error, f, va, 0);
@@ -144,26 +144,26 @@ void file_error(RMagic *ms, int error, const char *f, ...) {
  * Print an error with magic line number.
  */
 /*VARARGS*/
-void file_magerror(RMagic *ms, const char *f, ...) {
+void file_magerror(RzMagic *ms, const char *f, ...) {
 	va_list va;
 	va_start (va, f);
 	file_error_core (ms, 0, f, va, ms->line);
 	va_end (va);
 }
 
-void file_oomem(RMagic *ms, size_t len) {
+void file_oomem(RzMagic *ms, size_t len) {
 	file_error (ms, errno, "cannot allocate %zu bytes", len);
 }
 
-void file_badseek(RMagic *ms) {
+void file_badseek(RzMagic *ms) {
 	file_error (ms, errno, "error seeking");
 }
 
-void file_badread(RMagic *ms) {
+void file_badread(RzMagic *ms) {
 	file_error (ms, errno, "error reading");
 }
 
-int file_buffer(RMagic *ms, int fd, const char *inname, const void *buf, size_t nb) {
+int file_buffer(RzMagic *ms, int fd, const char *inname, const void *buf, size_t nb) {
 	int mime, m = 0;
 	if (!ms) {
 		return -1;
@@ -213,7 +213,7 @@ int file_buffer(RMagic *ms, int fd, const char *inname, const void *buf, size_t 
 	return m;
 }
 
-int file_reset(RMagic *ms) {
+int file_reset(RzMagic *ms) {
 	if (!ms) {
 		return 0;
 	}
@@ -236,7 +236,7 @@ int file_reset(RMagic *ms) {
 	*(n)++ = (((ut32)*(o) >> 0) & 7) + '0', \
 	(o)++)
 
-const char *file_getbuffer(RMagic *ms) {
+const char *file_getbuffer(RzMagic *ms) {
 	char *pbuf, *op, *np;
 	size_t psize, len;
 
@@ -318,7 +318,7 @@ const char *file_getbuffer(RMagic *ms) {
 	return ms->o.pbuf;
 }
 
-int file_check_mem(RMagic *ms, unsigned int level) {
+int file_check_mem(RzMagic *ms, unsigned int level) {
 	if (level >= ms->c.len) {
 		size_t len = (ms->c.len += 20) * sizeof (*ms->c.li);
 		ms->c.li = (!ms->c.li) ? malloc (len) :

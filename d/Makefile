@@ -1,6 +1,6 @@
 include ../../config.mk
 
-MAGICDIR=${DESTDIR}${DATADIR}/radare2/${VERSION}/magic
+MAGICDIR=${DESTDIR}${DATADIR}/rizin/${VERSION}/magic
 
 install: ${F_SDB}
 	-rm -rf "$(MAGICDIR)"

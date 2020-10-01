@@ -1,10 +1,10 @@
 /* radare - Copyright 2011-2019 pancake<nopcode.org> */
 /* $OpenBSD: magic.c,v 1.8 2009/10/27 23:59:37 deraadt Exp $ */
 
-#include <r_userconf.h>
-#include <r_magic.h>
+#include <rz_userconf.h>
+#include <rz_magic.h>
 
-R_LIB_VERSION (r_magic);
+R_LIB_VERSION (rz_magic);
 
 #ifdef _MSC_VER
 # include <io.h>
@@ -21,20 +21,20 @@ R_LIB_VERSION (r_magic);
 // we keep this code just to make debian happy, but we should use
 // our own magic implementation for consistency reasons
 #include <magic.h>
-#undef R_API
-#define R_API
+#undef RZ_API
+#define RZ_API
 
-R_API RMagic* r_magic_new(int flags) { return magic_open (flags); }
-R_API void r_magic_free(RMagic* m) { if (m) { magic_close (m); } }
-R_API const char *r_magic_file(RMagic* m, const char * f) { return magic_file (m, f); } 
-R_API const char *r_magic_descriptor(RMagic* m, int fd) { return magic_descriptor (m, fd); }
-R_API const char *r_magic_buffer(RMagic* m, const void *b, size_t s) { return magic_buffer (m, b, s); }
-R_API const char *r_magic_error(RMagic* m) { return magic_error (m); }
-R_API void r_magic_setflags(RMagic* m, int f) { magic_setflags (m, f); }
-R_API bool r_magic_load(RMagic* m, const char *f) { return magic_load (m, f) != -1; }
-R_API bool r_magic_compile(RMagic* m, const char *x) { return magic_compile (m, x) != -1; }
-R_API bool r_magic_check(RMagic* m, const char *x) { return magic_check (m, x) != -1; }
-R_API int r_magic_errno(RMagic* m) { return magic_errno (m); }
+RZ_API RzMagic* rz_magic_new(int flags) { return magic_open (flags); }
+RZ_API void rz_magic_free(RzMagic* m) { if (m) { magic_close (m); } }
+RZ_API const char *rz_magic_file(RzMagic* m, const char * f) { return magic_file (m, f); } 
+RZ_API const char *rz_magic_descriptor(RzMagic* m, int fd) { return magic_descriptor (m, fd); }
+RZ_API const char *rz_magic_buffer(RzMagic* m, const void *b, size_t s) { return magic_buffer (m, b, s); }
+RZ_API const char *rz_magic_error(RzMagic* m) { return magic_error (m); }
+RZ_API void rz_magic_setflags(RzMagic* m, int f) { magic_setflags (m, f); }
+RZ_API bool rz_magic_load(RzMagic* m, const char *f) { return magic_load (m, f) != -1; }
+RZ_API bool rz_magic_compile(RzMagic* m, const char *x) { return magic_compile (m, x) != -1; }
+RZ_API bool rz_magic_check(RzMagic* m, const char *x) { return magic_check (m, x) != -1; }
+RZ_API int rz_magic_errno(RzMagic* m) { return magic_errno (m); }
 
 #else
 
@@ -58,7 +58,7 @@ static void free_mlist(struct mlist *mlist) {
 	}
 	for (ml = mlist->next; ml != mlist;) {
 		struct mlist *next = ml->next;
-		struct r_magic *mg = ml->magic;
+		struct rz_magic *mg = ml->magic;
 		file_delmagic (mg, ml->mapped, ml->nmagic);
 		free (ml);
 		ml = next;
@@ -66,7 +66,7 @@ static void free_mlist(struct mlist *mlist) {
 	free (ml);
 }
 
-static int info_from_stat(RMagic *ms, unsigned short md) {
+static int info_from_stat(RzMagic *ms, unsigned short md) {
 	/* We cannot open it, but we were able to stat it. */
 	if (md & 0222) {
 		if (file_printf (ms, "writable, ") == -1) {
@@ -89,13 +89,13 @@ static int info_from_stat(RMagic *ms, unsigned short md) {
 	return 0;
 }
 
-static void close_and_restore (const RMagic *ms, const char *name, int fd, const struct stat *sb) {
+static void close_and_restore (const RzMagic *ms, const char *name, int fd, const struct stat *sb) {
 	if (fd >= 0) {
 		close (fd);
 	}
 }
 
-static const char *file_or_fd(RMagic *ms, const char *inname, int fd) {
+static const char *file_or_fd(RzMagic *ms, const char *inname, int fd) {
 	bool ispipe = false;
 	int rv = -1;
 	unsigned char *buf;
@@ -199,12 +199,12 @@ done:
 /* API */
 
 // TODO: reinitialize all the time
-R_API RMagic* r_magic_new(int flags) {
-	RMagic *ms = R_NEW0 (RMagic);
+RZ_API RzMagic* rz_magic_new(int flags) {
+	RzMagic *ms = R_NEW0 (RzMagic);
 	if (!ms) {
 		return NULL;
 	}
-	r_magic_setflags (ms, flags);
+	rz_magic_setflags (ms, flags);
 	ms->o.buf = ms->o.pbuf = NULL;
 	ms->c.li = malloc ((ms->c.len = 10) * sizeof (*ms->c.li));
 	if (!ms->c.li) {
@@ -218,7 +218,7 @@ R_API RMagic* r_magic_new(int flags) {
 	return ms;
 }
 
-R_API void r_magic_free(RMagic *ms) {
+RZ_API void rz_magic_free(RzMagic *ms) {
 	if (ms) {
 		free_mlist (ms->mlist);
 		free (ms->o.pbuf);
@@ -228,7 +228,7 @@ R_API void r_magic_free(RMagic *ms) {
 	}
 }
 
-R_API bool r_magic_load_buffer(RMagic* ms, const char *magicdata) {
+RZ_API bool rz_magic_load_buffer(RzMagic* ms, const char *magicdata) {
 	if (*magicdata == '#') {
 		struct mlist *ml = file_apprentice (ms, magicdata, FILE_LOAD);
 		if (ml) {
@@ -242,7 +242,7 @@ R_API bool r_magic_load_buffer(RMagic* ms, const char *magicdata) {
 	return false;
 }
 
-R_API bool r_magic_load(RMagic* ms, const char *magicfile) {
+RZ_API bool rz_magic_load(RzMagic* ms, const char *magicfile) {
 	struct mlist *ml = file_apprentice (ms, magicfile, FILE_LOAD);
 	if (ml) {
 		free_mlist (ms->mlist);
@@ -252,27 +252,27 @@ R_API bool r_magic_load(RMagic* ms, const char *magicfile) {
 	return false;
 }
 
-R_API bool r_magic_compile(RMagic *ms, const char *magicfile) {
+RZ_API bool rz_magic_compile(RzMagic *ms, const char *magicfile) {
 	struct mlist *ml = file_apprentice (ms, magicfile, FILE_COMPILE);
 	free_mlist (ml);
 	return ml != NULL;
 }
 
-R_API bool r_magic_check(RMagic *ms, const char *magicfile) {
+RZ_API bool rz_magic_check(RzMagic *ms, const char *magicfile) {
 	struct mlist *ml = file_apprentice (ms, magicfile, FILE_CHECK);
 	free_mlist (ml);
 	return ml != NULL;
 }
 
-R_API const char* r_magic_descriptor(RMagic *ms, int fd) {
+RZ_API const char* rz_magic_descriptor(RzMagic *ms, int fd) {
 	return file_or_fd (ms, NULL, fd);
 }
 
-R_API const char * r_magic_file(RMagic *ms, const char *inname) {
+RZ_API const char * rz_magic_file(RzMagic *ms, const char *inname) {
 	return file_or_fd (ms, inname, 0); // 0 = stdin
 }
 
-R_API const char * r_magic_buffer(RMagic *ms, const void *buf, size_t nb) {
+RZ_API const char * rz_magic_buffer(RzMagic *ms, const void *buf, size_t nb) {
 	if (file_reset (ms) == -1) {
 		return NULL;
 	}
@@ -282,21 +282,21 @@ R_API const char * r_magic_buffer(RMagic *ms, const void *buf, size_t nb) {
 	return file_getbuffer (ms);
 }
 
-R_API const char *r_magic_error(RMagic *ms) {
+RZ_API const char *rz_magic_error(RzMagic *ms) {
 	if (ms && ms->haderr) {
 		return ms->o.buf;
 	}
 	return NULL;
 }
 
-R_API int r_magic_errno(RMagic *ms) {
+RZ_API int rz_magic_errno(RzMagic *ms) {
 	if (ms && ms->haderr) {
 		return ms->error;
 	}
 	return 0;
 }
 
-R_API void r_magic_setflags(RMagic *ms, int flags) {
+RZ_API void rz_magic_setflags(RzMagic *ms, int flags) {
 	if (ms) {
 		ms->flags = flags;
 	}
